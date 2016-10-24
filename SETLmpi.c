@@ -98,87 +98,145 @@ int main( int argc, char** argv)
     int size, patternSize, rank, numprocess;
     long long before, after;
     MATCHLIST*list;
-    curW = readWorldFromFile(argv[1], &size);
     
-    iterations = atoi(argv[2]);
-    
-    patterns[N] = readPatternFromFile(argv[3], &patternSize);
     
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocess);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
     if (argc < 4 ){
         fprintf(stderr, 
             "Usage: %s <world file> <Iterations> <pattern file>\n", argv[0]);
         exit(1);
     } 
 
+    //MPI_Barrier(MPI_COMM_WORLD);
     if(rank == 0){
+        curW = readWorldFromFile(argv[1], &size);
+    
+        iterations = atoi(argv[2]);
+    
+        patterns[N] = readPatternFromFile(argv[3], &patternSize);
         printf("World Size = %d\n", size);
         printf("Iterations = %d\n", iterations);
         printf("Pattern size = %d\n", patternSize);
         nextW = allocateSquareMatrix(size+2, DEAD);
-        for(int i = 0; i < 5; i++)
-        {
-            MPI_Send(nextW[i], size+2,MPI_CHAR,2,i,MPI_COMM_WORLD);
-            //MPI_Send(nextW[1], size+2,MPI_CHAR,2,0,MPI_COMM_WORLD);
+        //printf("hello0\n"); 
+        char a[(size+2) * (size + 2)];
+        for(int i = 0; i < (size+2); i++){
+            for(int j = 0; j < size + 2; j++){
+                a[i * (size + 2)+ j] = nextW[i][j];
+            }
         }
-        
+            
+        //for(int i = 0; i < 5; i++)
+        //{
+        //int position = 0;
+        //char buff[10000000];
+        //MPI_Pack(&(nextW[0][0]), (size+2) * (size + 2), MPI_CHAR,buff,
+            //10000000,&position,MPI_COMM_WORLD);
+            //MPI_Send(nextW[4], size+2,MPI_CHAR,2,1,MPI_COMM_WORLD);
+            //MPI_Send(nextW[1], size+2,MPI_CHAR,2,0,MPI_COMM_WORLD);
+        //}
+        freeSquareMatrix(nextW);
+        int turn = 3;
+        MPI_Send(a, (size+2) * (size + 2), MPI_CHAR, 2,0,MPI_COMM_WORLD);
+        MPI_Send(&turn, 1, MPI_INT, 1, 3, MPI_COMM_WORLD);
     }
     
     
 
     if(rank == 1){
-        
+        curW = readWorldFromFile(argv[1], &size);
+    
+        iterations = atoi(argv[2]);
+    
+        patterns[N] = readPatternFromFile(argv[3], &patternSize);
         for (dir = E; dir <= W; dir++){
             patterns[dir] = allocateSquareMatrix(patternSize, DEAD);
             rotate90(patterns[dir-1], patterns[dir], patternSize);
         }
-        //printSquareMatrix(patterns[N], patternSize);
-        //printSquareMatrix(patterns[E], patternSize);
-        //printSquareMatrix(patterns[S], patternSize);
-        //printSquareMatrix(patterns[W], patternSize);
-        //MPI_Send(&(patterns[0][0]),sizeof(patterns),MPI_CHAR,2,1,MPI_COMM_WORLD);
+        int turn;
+        MPI_Status status;
+        MPI_Recv(&turn, 1, MPI_INT, 0, 3, MPI_COMM_WORLD, &status);
+        //printf("hello1\n"); 
+        char a[4 * patternSize * patternSize];
+        for(int i = 0; i < 4; i++){
+            for(int j = 0; j < patternSize; j++){
+                for(int k = 0; k < patternSize; k++){
+                    a[i * patternSize * patternSize + j * patternSize + k] = patterns[i][j][k];
+                }
+                
+            }
+        }
+        printSquareMatrix(patterns[N], patternSize);
+        printSquareMatrix(patterns[E], patternSize);
+        printSquareMatrix(patterns[S], patternSize);
+        printSquareMatrix(patterns[W], patternSize);
+        freeSquareMatrix( patterns[0] );
+        freeSquareMatrix( patterns[1] );
+        freeSquareMatrix( patterns[2] );
+        freeSquareMatrix( patterns[3] );  
+        
+        MPI_Send(a, 4 * patternSize * patternSize,MPI_CHAR,2,1,MPI_COMM_WORLD);
+        
     }
     if(rank == 2){
+        curW = readWorldFromFile(argv[1], &size);
+    
+        iterations = atoi(argv[2]);
+    
+        patterns[N] = readPatternFromFile(argv[3], &patternSize);
        MPI_Status status;
-       for(int i = 0; i < 5; i++)
-       {
-
-           MPI_Recv(nextW[i], size+2 ,MPI_CHAR, 0, i,MPI_COMM_WORLD,&status);
-            //MPI_Recv(nextW[1], size+2 ,MPI_CHAR, 0, 0,MPI_COMM_WORLD,&status);
-        }
+       char b[(size+2) * (size + 2)];
+       //for(int i = 0; i < 5; i++)
+       //{
        
-       //MPI_Recv(&(patterns[0][0]),/*4 * patternSize*patternSize*/sizeof(patterns),MPI_CHAR,1,1,MPI_COMM_WORLD,&status);
-       // //#ifdef DEBUG
-       //printSquareMatrix(patterns[N], patternSize);
-       // printSquareMatrix(patterns[E], patternSize);
-       // printSquareMatrix(patterns[S], patternSize);
-       // printSquareMatrix(patterns[W], patternSize);
-        //#endif
-       //printSquareMatrix(curW, size); 
-       for(int i = 0; i < size + 1; i++)
-       {
-        printf("%c",nextW[0][i]);
-       }
-       printf("\n");
-       for(int i = 0; i < size + 1; i++)
-       {
-        printf("%c",nextW[1][i]);
-       }
-       printf("\n");
-       for(int i = 0; i < size + 1; i++)
-       {
-        printf("%c",nextW[2][i]);
-       }
-       printf("\n");
-       for(int i = 0; i < size + 1; i++)
-       {
-        printf("%c",nextW[3][i]);
-       }
-        printf("hello\n"); 
+       
+
+        MPI_Recv(b, (size+2) * (size + 2) ,MPI_CHAR, 0, 0,MPI_COMM_WORLD,&status);
+            //MPI_Recv(nextW[1], size+2 ,MPI_CHAR, 0, 0,MPI_COMM_WORLD,&status);
+        //}
+         nextW = (char**) malloc(sizeof(char*) * (size+2));
+        if (nextW == NULL) 
+            die(__LINE__);
+        //printf("hellobefore\n"); 
+        for(int i = 0; i < size+2;i++){
+            nextW[i] = (char*) malloc(sizeof(char) * (size+2));
+        }
+       for(int i = 0; i < (size+2); i++){
+            for(int j = 0; j < size + 2; j++){
+                nextW[i][j] = b[i * (size + 2)+ j];
+            }
+            //printf("%c",b[i]);
+        }
+        //printSquareMatrix(nextW, size + 2); 
+        //patterns = (char**) malloc(sizeof(char*) * 4);
+        
+        
+        char c[4 * patternSize * patternSize];
+
+       MPI_Recv(c,4 * patternSize * patternSize,MPI_CHAR,1,1,MPI_COMM_WORLD,&status);
+        //printf("helloafter\n"); 
+        
+        for(int i = 0; i < 4;i++){
+            patterns[i] = (char**) malloc(sizeof(char*) * patternSize);
+            if (patterns[i] == NULL) 
+                die(__LINE__);
+            for(int j = 0; j < patternSize;j++){
+                patterns[i][j] = (char*) malloc(sizeof(char) * patternSize);
+            }
+        }
+        for(int i = 0; i < 4; i++){
+            for(int j = 0; j < patternSize; j++){
+                for(int k = 0; k < patternSize; k++){
+                    patterns[i][j][k] = c[i * patternSize * patternSize + j * patternSize + k];
+                }
+                
+            }
+        }
             //Start timer
-            /*before = wallClockTime();
+            before = wallClockTime();
             //Actual work start
             list = newList();
         
@@ -217,7 +275,7 @@ int main( int argc, char** argv)
             freeSquareMatrix( patterns[0] );
             freeSquareMatrix( patterns[1] );
             freeSquareMatrix( patterns[2] );
-            freeSquareMatrix( patterns[3] );  */
+            freeSquareMatrix( patterns[3] );  
     }
     MPI_Finalize();
     return 0;

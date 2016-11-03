@@ -8,5 +8,6 @@ genWorld:	genWorld.c
 
 SETLMPI: SETLMPI.c
 	mpicc -o SETLMPI SETLMPI.c
-SETREAL: SETLreal.c
+
+SETLREAL: SETLreal.c
 	mpicc -o SETLREAL SETLreal.c

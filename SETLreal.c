@@ -112,18 +112,15 @@ int main( int argc, char** argv)
     curW = readWorldFromFile(argv[1], &size);
     nextW = allocateSquareMatrix(size+2, DEAD);
     
-    
-    //printf("World Size = %d\n", size);
-    
     iterations = atoi(argv[2]);
-    //printf("Iterations = %d\n", iterations);
+
     
     patterns[N] = readPatternFromFile(argv[3], &patternSize);
     for (dir = E; dir <= W; dir++){
         patterns[dir] = allocateSquareMatrix(patternSize, DEAD);
         rotate90(patterns[dir-1], patterns[dir], patternSize);
     }
-    //printf("Pattern size = %d\n", patternSize);
+
     
 #ifdef DEBUG
     printSquareMatrix(patterns[N], patternSize);
@@ -131,8 +128,6 @@ int main( int argc, char** argv)
     printSquareMatrix(patterns[S], patternSize);
     printSquareMatrix(patterns[W], patternSize);
 #endif
-    // 3个核， 9个线程， 每个核3个
-    // ~~~~~~ 10 个线程， 每个核4个， 最后一个两个
     int iterationPerProcess = (iterations + (numprocess - 2))  / (numprocess - 1) ;
     //Start timer
     if(rank == 0){
@@ -157,7 +152,6 @@ int main( int argc, char** argv)
     //Actual work start
     list = newList();
     int count;
-    //for(int i = 0; i < numprocess; i++){
     if(rank == 1){
         printf("World Size = %d\n", size);
         printf("Iterations = %d\n", iterations);
@@ -187,21 +181,10 @@ int main( int argc, char** argv)
             nextW = temp;
         }
         printList( list );
-        // if(rank != numprocess - 1)
-        // {
         MPI_Send(&count, 1, MPI_INT, rank + 1, rank, MPI_COMM_WORLD);
-        // }
-        //MPI_Reduce(&(list->nItem), &count, 1, MPI_INT, MPI_SUM, 1, MPI_COMM_WORLD);
-        //printf("List size = %d\n", count);
-        
-        // for(int i = 2; i <= numprocess - 1; i++){
-        //     MPI_Send(&i, 1, MPI_INT, i, i, MPI_COMM_WORLD);
-        // }
     }
     else if(rank > 1 && rank <= numprocess - 1){
         MPI_Status status;
-        //MPI_Request request;
-        //int count;
         int i;
         int count = 0;
         char* cur = (char*)malloc(sizeof(char) * (size + 2) * (size + 2));
@@ -233,9 +216,6 @@ int main( int argc, char** argv)
         if(rank == numprocess - 1){
             after = wallClockTime();
         }
-        //MPI_Reduce(&(list->nItem), &count, 1, MPI_INT, MPI_SUM, 1, MPI_COMM_WORLD);
-        // MPI_Isend(cur, (size + 2) * (size + 2), MPI_CHAR, rank + 1, rank, MPI_COMM_WORLD, &request);
-        //MPI_Recv(&i, 1, MPI_INT, rank, rank, MPI_COMM_WORLD, &status);
         MPI_Recv(&count, 1, MPI_INT, rank - 1, rank - 1, MPI_COMM_WORLD, &status);
         printList( list );
         if(rank != numprocess - 1)
@@ -248,71 +228,7 @@ int main( int argc, char** argv)
         }
         
     }
-    //     else if(rank == numprocess - 1){
-    //         MPI_Status status;
-    //         char* cur = (char*)malloc(sizeof(char) * (size + 2) * (size + 2));
-    //         long long after;
-    //         //MPI_Recv(&after, 1, MPI_LONG_LONG, 0, 0, MPI_COMM_WORLD, &status);
-    //         MPI_Recv(cur, (size + 2) * (size + 2), MPI_CHAR, 0, rank,
-    //             MPI_COMM_WORLD, &status);
-    //         for(long k = 0; k < (size+2); k++){
-    //             for(long j = 0; j < size + 2; j++){
-    //                 curW[k][j] = cur[k * (size + 2)+ j] ;
-    //             }
-    //         }
-    //         for (iter = iterations - iterationPerProcess; iter < iterations; iter++){
     
-    // #ifdef DEBUG
-    //         printf("World Iteration.%d\n", iter);
-    //         printSquareMatrix(curW, size+2);
-    // #endif
-    
-    //             searchPatterns( curW, size, iter, patterns, patternSize, list);
-    
-    //     //Generate next generation
-    //             evolveWorld( curW, nextW, size );
-    //             temp = curW;
-    //             curW = nextW;
-    //             nextW = temp;
-    //         }
-    //         // if(iterationPerProcess * (i + 1) >= iterations){
-    //         //     break;
-    //         // }
-    //         printList( list );
-    //         // after = wallClockTime();
-    
-    //         // printf("Sequential SETL took %1.2f seconds\n",
-    //         //     ((float)(after - before))/1000000000);
-    //     }
-    //}
-    //     for (iter = 0; iter < iterations; iter++){
-    
-    // /*#ifdef DEBUG
-    //         printf("World Iteration.%d\n", iter);
-    //         printSquareMatrix(curW, size+2);
-    // #endif*/
-    
-    //         searchPatterns( curW, size, iter, patterns, patternSize, list);
-    
-    //         //Generate next generation
-    //         evolveWorld( curW, nextW, size );
-    //         temp = curW;
-    //         curW = nextW;
-    //         nextW = temp;
-    //     }
-    
-    //     printList( list );
-    
-    
-    
-    //Stop timer
-    // after = wallClockTime();
-    
-    // printf("Sequential SETL took %1.2f seconds\n",
-    //     ((float)(after - before))/1000000000);
-    
-    
-    //Clean up
     deleteList( list );
     
     freeSquareMatrix( curW );

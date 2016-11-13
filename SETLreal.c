@@ -186,7 +186,7 @@ int main( int argc, char** argv)
             nextW = temp;
         }
         printList( list );
-	if(iteration != numprocess - 1)
+	if(iterations != numprocess - 1)
 	{
 	    MPI_Send(&count, 1, MPI_INT, rank + 1, rank, MPI_COMM_WORLD);
 	}
@@ -202,7 +202,7 @@ int main( int argc, char** argv)
         //MPI_Request request;
         //int count;
         int i;
-	int count;
+	    int count;
         char* cur = (char*)malloc(sizeof(char) * (size + 2) * (size + 2));
         MPI_Recv(cur, (size + 2) * (size + 2), MPI_CHAR, 0, rank,
                  MPI_COMM_WORLD, &status);

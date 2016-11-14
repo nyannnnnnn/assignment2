@@ -130,8 +130,22 @@ int main( int argc, char** argv)
 #endif
     int iterationPerProcess = (iterations + (numprocess - 2))  / (numprocess - 1) ;
     //Start timer
+    int number[1], *recv;
+
     if(rank == 0){
+        printf("World Size = %d\n", size);
+        printf("Iterations = %d\n", iterations);
+        printf("Pattern size = %d\n", patternSize);
+#ifdef DEBUG
+        printSquareMatrix(patterns[N], patternSize);
+        printSquareMatrix(patterns[E], patternSize);
+        printSquareMatrix(patterns[S], patternSize);
+        printSquareMatrix(patterns[W], patternSize);
+#endif
+        number[0] = 0;
         MPI_Request request;
+        int i = 0;
+        //MPI_Send(&i, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
         char* cur = (char*)malloc(sizeof(char) * (size + 2) * (size + 2));
         for (iter = 0; iter < iterations - 1; iter++){
             evolveWorld( curW, nextW, size );
@@ -145,26 +159,25 @@ int main( int argc, char** argv)
                     }
                 }
                 MPI_Send(cur, (size + 2) * (size + 2), MPI_CHAR, ((iter + 1) / iterationPerProcess) + 1 , ((iter + 1) / iterationPerProcess) + 1, MPI_COMM_WORLD);
+                //sleep(1);
             }
         }
+        MPI_Gather(&number[0], 1, MPI_INT, recv, 1, MPI_INT, 1, MPI_COMM_WORLD);
+        //MPI_Reduce(&number, &recv, 1, MPI_INT, MPI_SUM, 1, MPI_COMM_WORLD);
     }
     before = wallClockTime();
     //Actual work start
     list = newList();
+    int items[1] = {0};
     int count;
     if(rank == 1){
-        printf("World Size = %d\n", size);
-        printf("Iterations = %d\n", iterations);
-        printf("Pattern size = %d\n", patternSize);
-#ifdef DEBUG
-        printSquareMatrix(patterns[N], patternSize);
-        printSquareMatrix(patterns[E], patternSize);
-        printSquareMatrix(patterns[S], patternSize);
-        printSquareMatrix(patterns[W], patternSize);
-#endif
+        recv = (int *)malloc((numprocess)*sizeof(int));
+        int i; 
+        MPI_Status status;
+       
         int count = 0;
+        //MPI_Recv(&i, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
         MPI_Request request;
-        //before = wallClockTime();
         for (iter = 0; iter < iterationPerProcess; iter++){
             
 #ifdef DEBUG
@@ -180,13 +193,23 @@ int main( int argc, char** argv)
             curW = nextW;
             nextW = temp;
         }
-        printList( list );
-        MPI_Send(&count, 1, MPI_INT, rank + 1, rank, MPI_COMM_WORLD);
+        number[0] = list->nItem;
+        MPI_Gather(&number[0], 1, MPI_INT, recv, 1, MPI_INT, 1, MPI_COMM_WORLD);
+
+        for(int i = 0; i < numprocess; i++)
+        {
+            items[0] += recv[i];
+        }
+        printf("List size = %d\n", items[0]);
+        //printList( list );
+        MPI_Send(&count, 1, MPI_INT, 2, 1, MPI_COMM_WORLD);
+        free(recv);
+        
     }
     else if(rank > 1 && rank <= numprocess - 1){
         MPI_Status status;
-        int i;
         int count = 0;
+        int i = 1;
         char* cur = (char*)malloc(sizeof(char) * (size + 2) * (size + 2));
         MPI_Recv(cur, (size + 2) * (size + 2), MPI_CHAR, 0, rank,
                  MPI_COMM_WORLD, &status);
@@ -213,22 +236,48 @@ int main( int argc, char** argv)
             curW = nextW;
             nextW = temp;
         }
-        if(rank == numprocess - 1){
-            after = wallClockTime();
-        }
-        MPI_Recv(&count, 1, MPI_INT, rank - 1, rank - 1, MPI_COMM_WORLD, &status);
-        printList( list );
-        if(rank != numprocess - 1)
-        {
-            MPI_Send(&count, 1, MPI_INT, rank + 1, rank, MPI_COMM_WORLD);
-        }
-        if(rank == numprocess - 1){
-            printf("Sequential SETL took %1.2f seconds\n",
-                   ((float)(after - before))/1000000000);
-        }
+        // if(rank == numprocess - 1){
+        //     after = wallClockTime();
+        // }
+
+        //else
+            //sleep(1);
+        number[0] = list->nItem;
+        MPI_Gather(&number[0], 1, MPI_INT, recv, 1, MPI_INT, 1, MPI_COMM_WORLD);
+        //MPI_Recv(, 1, MPI_INT, rank - 1, 1, MPI_COMM_WORLD, &status);
+        //printList( list );
+        // if(rank == 2)
+        // {
+        //     MPI_Recv(&count, 1, MPI_INT, 1, 1, MPI_COMM_WORLD, &status);
+        // }
+        if(rank == numprocess - 1)
+            usleep(1000000);
+        
         
     }
-    
+    if(rank != 1)
+     {
+        sleep(3);
+     }   
+    //MPI_Barrier(MPI_COMM_WORLD);
+    for(int k = 1; k < numprocess; k++)
+    {
+        //MPI_Barrier(MPI_COMM_WORLD);
+        // if(1 == rank && k == 1){
+        //    printf("List size = %d\n", items[0]);
+        // }
+        if(rank == k){
+            printList(list);
+        }
+        // if(k != numprocess - 1 && rank != numprocess - 1)
+        //     usleep(500000);
+        //MPI_Barrier(MPI_COMM_WORLD);
+    }
+    after = wallClockTime();
+    if(rank == numprocess - 1){
+        printf("Parallel SETL took %1.2f seconds\n",
+                ((float)(after - before))/1000000000);
+    }
     deleteList( list );
     
     freeSquareMatrix( curW );
@@ -554,7 +603,7 @@ void printList(MATCHLIST* list)
     int i;
     MATCH* cur;
     
-    printf("List size = %d\n", list->nItem);
+    //printf("List size = %d\n", list->nItem);
     
     
     if (list->nItem == 0) return;
